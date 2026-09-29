@@ -14,11 +14,12 @@ jobs:
       - uses: home-assistant/actions/hassfest@master
 
   hacs:
+    # HACS validates by downloading files from the public repo, so it can only
+    # run once the repository is public.
+    if: ${{ !github.event.repository.private }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: hacs/action@main
         with:
           category: integration
-          # Private repo: HACS can't check topics/description via the API.
-          ignore: description topics
