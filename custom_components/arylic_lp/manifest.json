@@ -1,0 +1,13 @@
+{
+  "domain": "arylic_lp",
+  "name": "Arylic - LP Series",
+  "codeowners": ["@biddies4africa"],
+  "config_flow": true,
+  "documentation": "https://github.com/biddies4africa/ha-arylic-lp",
+  "integration_type": "device",
+  "iot_class": "local_polling",
+  "issue_tracker": "https://github.com/biddies4africa/ha-arylic-lp/issues",
+  "loggers": ["custom_components.arylic_lp"],
+  "requirements": [],
+  "version": "0.2.0"
+}

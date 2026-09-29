@@ -1,0 +1,119 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Add an Arylic LP-series player",
+        "description": "Enter the player's IP address. Give it a fixed address (DHCP reservation) on your router.",
+        "data": {
+          "host": "IP address",
+          "name": "Name (optional)"
+        }
+      },
+      "power": {
+        "title": "Speaker power",
+        "description": "Optionally pick the smart plug that powers {name}'s speakers. It will be switched on when playback starts and off after a period of no playback. Leave empty for play-state and controls only.",
+        "data": {
+          "power_switch": "Speaker power switch",
+          "airplay_fallback": "Also use the AirPlay session flag to detect playback"
+        }
+      },
+      "reconfigure": {
+        "title": "Change IP address",
+        "data": {
+          "host": "IP address"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Could not reach the player's control port (TCP 2018). Check the address and that Home Assistant can route to it.",
+      "invalid_host": "Enter an IP address or host name.",
+      "unknown": "Unexpected error."
+    },
+    "abort": {
+      "already_configured": "This player is already configured (its address has been updated).",
+      "reconfigure_successful": "Address updated.",
+      "different_device": "That address belongs to a different player."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Speaker power",
+        "data": {
+          "power_switch": "Speaker power switch",
+          "airplay_fallback": "Also use the AirPlay session flag to detect playback"
+        }
+      }
+    }
+  },
+  "entity": {
+    "binary_sensor": {
+      "playing": {
+        "name": "Playing"
+      }
+    },
+    "sensor": {
+      "autopower_status": {
+        "name": "Auto-power",
+        "state": {
+          "playing": "Playing",
+          "idle": "Idle",
+          "off_pending": "Turning off soon",
+          "player_unavailable": "Player unavailable"
+        }
+      },
+      "connection_drops": {
+        "name": "Connection drops"
+      }
+    },
+    "switch": {
+      "led": {
+        "name": "LED"
+      },
+      "virtual_bass": {
+        "name": "Virtual bass"
+      },
+      "auto_on": {
+        "name": "Auto-on"
+      },
+      "auto_off": {
+        "name": "Auto-off"
+      },
+      "only_own": {
+        "name": "Only turn off if auto-on turned it on"
+      }
+    },
+    "number": {
+      "bass": {
+        "name": "Bass"
+      },
+      "mid": {
+        "name": "Mid"
+      },
+      "treble": {
+        "name": "Treble"
+      },
+      "off_delay": {
+        "name": "Auto-off delay"
+      }
+    }
+  },
+  "exceptions": {
+    "command_failed": {
+      "message": "Could not {action}: {error}"
+    },
+    "unknown_source": {
+      "message": "Unknown source: {source}"
+    }
+  },
+  "issues": {
+    "unreachable": {
+      "title": "{name} is unreachable",
+      "description": "Home Assistant has not been able to reach the player at {host} for over 10 minutes. Check it is powered and on the network. If its IP address changed, use Reconfigure on the integration. While it is unreachable, auto-power waits at least 60 minutes before switching the speakers off."
+    },
+    "power_failed": {
+      "title": "Could not {action} {switch}",
+      "description": "Auto-power tried several times to {action} {switch} but it did not respond ({error}). Check the plug is online."
+    }
+  }
+}

@@ -1,0 +1,58 @@
+{
+  "entity": {
+    "binary_sensor": {
+      "playing": {
+        "default": "mdi:music-note-off",
+        "state": {
+          "on": "mdi:music-note"
+        }
+      }
+    },
+    "sensor": {
+      "autopower_status": {
+        "default": "mdi:power-plug",
+        "state": {
+          "off_pending": "mdi:timer-sand",
+          "player_unavailable": "mdi:lan-disconnect"
+        }
+      },
+      "connection_drops": {
+        "default": "mdi:lan-disconnect"
+      }
+    },
+    "switch": {
+      "led": {
+        "default": "mdi:led-off",
+        "state": {
+          "on": "mdi:led-on"
+        }
+      },
+      "virtual_bass": {
+        "default": "mdi:speaker"
+      },
+      "auto_on": {
+        "default": "mdi:speaker-play"
+      },
+      "auto_off": {
+        "default": "mdi:speaker-off"
+      },
+      "only_own": {
+        "default": "mdi:hand-back-left"
+      }
+    },
+    "number": {
+      "bass": {
+        "default": "mdi:equalizer"
+      },
+      "mid": {
+        "default": "mdi:equalizer"
+      },
+      "treble": {
+        "default": "mdi:equalizer"
+      },
+      "off_delay": {
+        "default": "mdi:timer-outline"
+      }
+    }
+  }
+}
