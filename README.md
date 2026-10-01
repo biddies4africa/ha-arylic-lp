@@ -150,7 +150,7 @@ networks.
 | Model | Firmware | Result |
 |---|---|---|
 | LP10 | `AR241CP_8285.9.1` | Play state (native Spotify Connect), volume, mute, source, tone, LED, auto-power confirmed |
-| LP10 | `AR241CE_8530.23.2` | TCP 2018 accepted connections but did not reply on the test unit |
+| LP10 | `AR241CE_8530.23.2` | Status, volume, source, tone and LED read correctly; play state not yet confirmed during playback. TCP 2018 stopped answering on this unit once; a full power-cycle (not a soft reboot) fixed it |
 
 Not yet verified: `PLA` for AirPlay, Bluetooth and line-in (the AirPlay fallback covers AirPlay).
 
