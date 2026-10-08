@@ -3,17 +3,25 @@
 from __future__ import annotations
 
 from datetime import timedelta
+from unittest.mock import patch
 
 from homeassistant.const import CONF_HOST, STATE_OFF, STATE_ON, STATE_UNAVAILABLE
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import issue_registry as ir
 from homeassistant.setup import async_setup_component
 import pytest
 from pytest_homeassistant_custom_component.common import (
     MockConfigEntry,
+    async_capture_events,
     async_fire_time_changed,
 )
 
-from custom_components.arylic_lp.const import CONF_AIRPLAY_FALLBACK, CONF_POWER_SWITCH, DOMAIN
+from custom_components.arylic_lp.const import (
+    CONF_AIRPLAY_FALLBACK,
+    CONF_POWER_SWITCH,
+    DOMAIN,
+    EVENT_AUTOPOWER,
+)
 
 PLUG = "input_boolean.plug"
 PLAYING = "binary_sensor.lounge_speakers_playing"
@@ -212,3 +220,88 @@ async def test_unload(hass: HomeAssistant, setup) -> None:
     _, entry = setup
     assert await hass.config_entries.async_unload(entry.entry_id)
     await hass.async_block_till_done(wait_background_tasks=True)
+
+
+class VendorError(Exception):
+    """A library exception that isn't a HomeAssistantError (as Tuya raises)."""
+
+
+@pytest.fixture
+async def flaky_setup(hass: HomeAssistant, patch_device):
+    """A plug whose turn_on fails `failures["count"]` times before working."""
+    failures = {"count": 0, "calls": 0}
+    hass.states.async_set("fakeplug.plug", STATE_OFF, {"friendly_name": "Fake Plug"})
+
+    async def turn_on(call) -> None:
+        failures["calls"] += 1
+        if failures["calls"] <= failures["count"]:
+            raise VendorError("network error:(2001) 2001")
+        hass.states.async_set("fakeplug.plug", STATE_ON, {"friendly_name": "Fake Plug"})
+
+    hass.services.async_register("fakeplug", "turn_on", turn_on)
+    events = async_capture_events(hass, EVENT_AUTOPOWER)
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        title="Lounge Speakers",
+        unique_id="a0b1c2d3e4f5",
+        data={CONF_HOST: "192.0.2.10"},
+        options={CONF_POWER_SWITCH: "fakeplug.plug", CONF_AIRPLAY_FALLBACK: True},
+    )
+    entry.add_to_hass(hass)
+    with patch("custom_components.arylic_lp.autopower.POWER_RETRY_DELAYS", (0, 0, 0, 0)):
+        assert await hass.config_entries.async_setup(entry.entry_id)
+        await hass.async_block_till_done(wait_background_tasks=True)
+        yield patch_device, failures, events
+
+
+async def test_vendor_exception_is_retried(hass: HomeAssistant, flaky_setup, freezer) -> None:
+    fake, failures, events = flaky_setup
+    failures["count"] = 2
+    fake.playing = True
+    await _advance(hass, freezer, 3)
+    assert hass.states.get("fakeplug.plug").state == STATE_ON
+    assert failures["calls"] == 3
+    assert [e.data["result"] for e in events] == [
+        "requested",
+        "attempt_failed",
+        "attempt_failed",
+        "succeeded",
+    ]
+    assert events[1].data["error"] == "network error:(2001) 2001"
+    assert events[0].data["entity_id"] == STATUS
+    status = hass.states.get(STATUS).attributes
+    assert status["last_action"] == "turn_on"
+    assert status["last_error"] is None
+    assert not ir.async_get(hass).async_get_issue(DOMAIN, f"power_failed_{_entry_id(hass)}")
+
+
+async def test_gives_up_and_raises_issue(hass: HomeAssistant, flaky_setup, freezer) -> None:
+    fake, failures, events = flaky_setup
+    failures["count"] = 99
+    fake.playing = True
+    await _advance(hass, freezer, 3)
+    assert hass.states.get("fakeplug.plug").state == STATE_OFF
+    assert failures["calls"] == 5  # first attempt + 4 retries
+    assert events[-1].data["result"] == "gave_up"
+    assert events[-1].data["attempt"] == 5
+    assert hass.states.get(STATUS).attributes["last_error"] == "network error:(2001) 2001"
+    assert ir.async_get(hass).async_get_issue(DOMAIN, f"power_failed_{_entry_id(hass)}")
+
+
+async def test_logbook_messages(hass: HomeAssistant, flaky_setup, freezer) -> None:
+    from custom_components.arylic_lp.logbook import _message
+
+    fake, failures, events = flaky_setup
+    failures["count"] = 1
+    fake.playing = True
+    await _advance(hass, freezer, 3)
+    messages = [_message(e.data) for e in events]
+    assert messages == [
+        "is going to turn on Fake Plug because playback started",
+        "could not turn on Fake Plug (attempt 1): network error:(2001) 2001. Retrying in 0 s",
+        "confirmed Fake Plug is on after 2 attempts",
+    ]
+
+
+def _entry_id(hass: HomeAssistant) -> str:
+    return hass.config_entries.async_entries(DOMAIN)[0].entry_id

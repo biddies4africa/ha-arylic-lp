@@ -34,7 +34,17 @@ UNREACHABLE_ISSUE_AFTER: Final = timedelta(minutes=10)
 # whether it is still playing.
 UNREACHABLE_OFF_DELAY: Final = timedelta(minutes=60)
 
-# Power switch actions: attempts, and how long to wait for the switch state to
-# confirm before retrying (cloud-backed plugs can lag).
-POWER_ATTEMPTS: Final = 3
+# Power switch actions. One command is in flight at a time: each attempt waits
+# for the service call to return (up to POWER_CALL_TIMEOUT) and then for the
+# switch state to confirm (cloud-backed plugs can lag). A failed attempt is
+# retried after the next delay, while the action is still wanted and the switch
+# still isn't in the target state - about 7 minutes in all.
+POWER_CALL_TIMEOUT: Final = 30
 POWER_CONFIRM_SECONDS: Final = 10
+POWER_RETRY_DELAYS: Final = (2, 5, 15, 30, 60, 60, 60, 60, 60, 60)
+# Failed attempts before a Repairs issue is raised (retries carry on).
+POWER_ISSUE_AFTER_ATTEMPTS: Final = 3
+
+# Fired for auto-power actions; shown in the logbook (Activity) and usable as an
+# automation trigger.
+EVENT_AUTOPOWER: Final = f"{DOMAIN}_autopower"

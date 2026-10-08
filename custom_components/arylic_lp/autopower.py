@@ -12,13 +12,14 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import STATE_OFF, STATE_ON
 from homeassistant.core import (
     CALLBACK_TYPE,
+    Context,
     Event,
     EventStateChangedData,
     HomeAssistant,
     callback,
     split_entity_id,
 )
-from homeassistant.exceptions import HomeAssistantError
+from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.event import async_call_later, async_track_state_change_event
 from homeassistant.helpers.storage import Store
@@ -27,8 +28,11 @@ from homeassistant.util import dt as dt_util
 from .const import (
     DEFAULT_OFF_DELAY_MIN,
     DOMAIN,
-    POWER_ATTEMPTS,
+    EVENT_AUTOPOWER,
+    POWER_CALL_TIMEOUT,
     POWER_CONFIRM_SECONDS,
+    POWER_ISSUE_AFTER_ATTEMPTS,
+    POWER_RETRY_DELAYS,
     UNREACHABLE_OFF_DELAY,
 )
 from .coordinator import LPCoordinator
@@ -43,6 +47,18 @@ STATUS_OFF_PENDING = "off_pending"
 STATUS_UNAVAILABLE = "player_unavailable"
 STATUSES = [STATUS_PLAYING, STATUS_IDLE, STATUS_OFF_PENDING, STATUS_UNAVAILABLE]
 
+# Why a power action was taken (event data "reason").
+REASON_PLAYBACK_STARTED = "playback_started"
+REASON_IDLE = "idle"
+REASON_UNREACHABLE = "player_unreachable"
+
+# Event data "result" values.
+RESULT_REQUESTED = "requested"
+RESULT_ATTEMPT_FAILED = "attempt_failed"
+RESULT_SUCCEEDED = "succeeded"
+RESULT_GAVE_UP = "gave_up"
+RESULT_CANCELLED = "cancelled"
+
 
 class AutoPowerController:
     """Drive one power switch from one player's play state.
@@ -53,7 +69,10 @@ class AutoPowerController:
       auto-off is enabled). An unreachable player counts as not playing, but
       with a countdown of at least UNREACHABLE_OFF_DELAY. With "only turn off
       what we turned on", a manually switched-on plug is left alone.
-    * Switch commands are retried and confirmed against the switch's state.
+    * Switch commands are confirmed against the switch's state and retried with
+      backoff. This works with any switch entity: success is the service call
+      returning without error *and* the state reaching the target.
+    * Each action is fired as an EVENT_AUTOPOWER event, which the logbook shows.
     """
 
     def __init__(
@@ -205,7 +224,7 @@ class AutoPowerController:
         if playing:
             self._cancel_off_timer()
             if started and self.auto_on and switch == STATE_OFF:
-                self._run(self._async_set_power(True))
+                self._run(self._async_set_power(True, REASON_PLAYBACK_STARTED))
         elif not self._may_turn_off or switch == STATE_OFF:
             self._cancel_off_timer()
         else:
@@ -232,11 +251,12 @@ class AutoPowerController:
 
     @callback
     def _off_timer_fired(self, _now: datetime) -> None:
+        reason = REASON_UNREACHABLE if self._off_timer_unreachable else REASON_IDLE
         self._off_timer = None
         self._off_timer_unreachable = False
         self.off_at = None
         if not self.playing and self._may_turn_off and self._switch_state() != STATE_OFF:
-            self._run(self._async_set_power(False))
+            self._run(self._async_set_power(False, reason))
         self._notify()
 
     def _run(self, coro: Any) -> None:
@@ -244,63 +264,154 @@ class AutoPowerController:
             self.hass, coro, f"{DOMAIN} power {self.power_switch}"
         )
 
-    async def _async_set_power(self, turn_on: bool) -> None:
+    def _cancel_reason(self, turn_on: bool) -> str | None:
+        """Why the action is no longer wanted, or None if it still is."""
+        if turn_on:
+            if not self.playing:
+                return "playback stopped"
+            if not self.auto_on:
+                return "auto-on was switched off"
+        else:
+            if self.playing:
+                return "playback started"
+            if not self._may_turn_off:
+                return "auto-off no longer applies"
+        return None
+
+    async def _async_set_power(self, turn_on: bool, reason: str) -> None:
         async with self._lock:
             target = STATE_ON if turn_on else STATE_OFF
-            # Conditions may have changed while queued.
-            if turn_on and not (self.playing and self.auto_on):
-                return
-            if not turn_on and (self.playing or not self._may_turn_off):
-                return
-            if self._switch_state() == target:
-                self._set_armed(turn_on)
-                return
-
             service = "turn_on" if turn_on else "turn_off"
+            context = Context()
             error = "unknown"
-            for attempt in range(1, POWER_ATTEMPTS + 1):
+            # Attempt 1 goes straight away; each retry waits its delay first.
+            for attempt, delay in enumerate((0, *POWER_RETRY_DELAYS), start=1):
+                if delay:
+                    await asyncio.sleep(delay)
+                # Re-check before every command: conditions may have changed
+                # while queued or waiting, and a failed call may still have
+                # switched the plug (or someone switched it by hand).
+                if (cancelled := self._cancel_reason(turn_on)) is not None:
+                    if attempt > 1:
+                        self._fire(
+                            service,
+                            RESULT_CANCELLED,
+                            reason,
+                            context,
+                            attempt=attempt - 1,
+                            error=cancelled,
+                        )
+                    return
+                if self._switch_state() == target:
+                    self._set_armed(turn_on)
+                    if attempt > 1:
+                        self._succeeded(service, reason, context, attempt - 1)
+                    return
+                if attempt == 1:
+                    self._fire(service, RESULT_REQUESTED, reason, context)
+
                 try:
-                    await self.hass.services.async_call(
-                        split_entity_id(self.power_switch)[0],
-                        service,
-                        {"entity_id": self.power_switch},
-                        blocking=True,
-                    )
-                except HomeAssistantError as err:
+                    async with asyncio.timeout(POWER_CALL_TIMEOUT):
+                        await self.hass.services.async_call(
+                            split_entity_id(self.power_switch)[0],
+                            service,
+                            {"entity_id": self.power_switch},
+                            blocking=True,
+                            context=context,
+                        )
+                except TimeoutError:
+                    error = f"no response within {POWER_CALL_TIMEOUT} s"
+                except Exception as err:
+                    # Integrations should raise HomeAssistantError, but some
+                    # leak their library's own exceptions (Tuya does).
                     error = str(err) or type(err).__name__
-                    _LOGGER.warning(
-                        "%s %s failed (attempt %d/%d): %s",
-                        service,
-                        self.power_switch,
-                        attempt,
-                        POWER_ATTEMPTS,
-                        error,
-                    )
                 else:
                     if await self._async_wait_for_state(target):
-                        self._record_action(service, None)
-                        self._set_armed(turn_on)
-                        ir.async_delete_issue(self.hass, DOMAIN, self.issue_id)
+                        self._succeeded(service, reason, context, attempt)
                         return
-                    error = f"{self.power_switch} did not report {target}"
-                    _LOGGER.warning("%s (attempt %d/%d)", error, attempt, POWER_ATTEMPTS)
-                if attempt < POWER_ATTEMPTS:
-                    await asyncio.sleep(2 * attempt)
+                    error = f"did not report {target} within {POWER_CONFIRM_SECONDS} s"
 
-            self._record_action(service, error)
-            ir.async_create_issue(
-                self.hass,
-                DOMAIN,
-                self.issue_id,
-                is_fixable=False,
-                severity=ir.IssueSeverity.WARNING,
-                translation_key="power_failed",
-                translation_placeholders={
-                    "switch": self.power_switch,
-                    "action": service.replace("_", " "),
-                    "error": error,
-                },
-            )
+                retry_in = (
+                    POWER_RETRY_DELAYS[attempt - 1] if attempt <= len(POWER_RETRY_DELAYS) else None
+                )
+                _LOGGER.warning(
+                    "%s %s failed (attempt %d): %s%s",
+                    service,
+                    self.power_switch,
+                    attempt,
+                    error,
+                    f"; retrying in {retry_in} s" if retry_in is not None else "; giving up",
+                )
+                self._record_action(service, error)
+                if retry_in is not None:
+                    self._fire(
+                        service,
+                        RESULT_ATTEMPT_FAILED,
+                        reason,
+                        context,
+                        attempt=attempt,
+                        error=error,
+                        retry_in=retry_in,
+                    )
+                if attempt == POWER_ISSUE_AFTER_ATTEMPTS:
+                    self._create_issue(service, error)
+
+            self._fire(service, RESULT_GAVE_UP, reason, context, attempt=attempt, error=error)
+            self._create_issue(service, error)
+
+    @callback
+    def _succeeded(self, service: str, reason: str, context: Context, attempt: int) -> None:
+        self._record_action(service, None)
+        self._set_armed(service == "turn_on")
+        ir.async_delete_issue(self.hass, DOMAIN, self.issue_id)
+        # A first-time success shows in the logbook as the switch's own state
+        # change, attributed to the "requested" entry through the shared context.
+        if attempt > 1:
+            self._fire(service, RESULT_SUCCEEDED, reason, context, attempt=attempt)
+
+    @callback
+    def _create_issue(self, service: str, error: str) -> None:
+        ir.async_create_issue(
+            self.hass,
+            DOMAIN,
+            self.issue_id,
+            is_fixable=False,
+            severity=ir.IssueSeverity.WARNING,
+            translation_key="power_failed",
+            translation_placeholders={
+                "switch": self.power_switch,
+                "action": service.replace("_", " "),
+                "error": error,
+            },
+        )
+
+    @callback
+    def _fire(
+        self,
+        service: str,
+        result: str,
+        reason: str,
+        context: Context,
+        **extra: Any,
+    ) -> None:
+        """Fire an EVENT_AUTOPOWER event (shown in the logbook by logbook.py)."""
+        status_entity = er.async_get(self.hass).async_get_entity_id(
+            "sensor", DOMAIN, f"{self.entry.unique_id or self.entry.entry_id}_autopower_status"
+        )
+        switch_state = self.hass.states.get(self.power_switch)
+        self.hass.bus.async_fire(
+            EVENT_AUTOPOWER,
+            {
+                "entity_id": status_entity,
+                "power_switch": self.power_switch,
+                "power_switch_name": switch_state.name if switch_state else self.power_switch,
+                "action": service,
+                "result": result,
+                "reason": reason,
+                **extra,
+            },
+            context=context,
+        )
 
     async def _async_wait_for_state(self, target: str) -> bool:
         for _ in range(POWER_CONFIRM_SECONDS * 2):
