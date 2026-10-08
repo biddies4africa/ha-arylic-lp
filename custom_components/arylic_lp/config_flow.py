@@ -15,6 +15,7 @@ from homeassistant.config_entries import (
 from homeassistant.const import CONF_HOST, CONF_NAME
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import selector
+from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
 import voluptuous as vol
 
 from .client import LPClient, LPError, device_id, discover
@@ -108,6 +109,51 @@ class LPConfigFlow(ConfigFlow, domain=DOMAIN):
                 }
             ),
             errors=errors,
+        )
+
+    async def async_step_zeroconf(self, discovery_info: ZeroconfServiceInfo) -> ConfigFlowResult:
+        """A player announced itself over mDNS (its AirPlay service).
+
+        Identify it with the UDP 1800 identity query only: short-lived
+        connections to TCP 2018 can upset the player, and discovery repeats
+        whenever it re-announces. A configured player at a new address just
+        gets its address updated (which reloads the entry).
+        """
+        if discovery_info.ip_address.version != 4:
+            return self.async_abort(reason="not_ipv4")
+        host = str(discovery_info.ip_address)
+        try:
+            identity = await self.hass.async_add_executor_job(discover, host)
+        except LPError:
+            return self.async_abort(reason="cannot_connect")
+        if (unique_id := device_id(identity)) is None:
+            return self.async_abort(reason="cannot_connect")
+        await self.async_set_unique_id(unique_id)
+        self._abort_if_unique_id_configured(updates={CONF_HOST: host})
+
+        self._host = host
+        self._identity = identity
+        self._title = identity.get("devicename") or DEFAULT_NAME
+        self.context["title_placeholders"] = {"name": self._title}
+        return await self.async_step_zeroconf_confirm()
+
+    async def async_step_zeroconf_confirm(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        if user_input is not None:
+            # One check of the control port, only once the user adds it.
+            client = LPClient(self._host)
+            try:
+                await client.get_playing()
+            except LPError:
+                return self.async_abort(reason="cannot_connect")
+            finally:
+                await client.close()
+            return await self.async_step_power()
+        self._set_confirm_only()
+        return self.async_show_form(
+            step_id="zeroconf_confirm",
+            description_placeholders={"name": self._title, "host": self._host},
         )
 
     async def async_step_power(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:

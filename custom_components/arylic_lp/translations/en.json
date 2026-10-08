@@ -1,9 +1,10 @@
 {
   "config": {
+    "flow_title": "{name}",
     "step": {
       "user": {
         "title": "Add an Arylic LP-series player",
-        "description": "Enter the player's IP address. Give it a fixed address (DHCP reservation) on your router.",
+        "description": "Enter the player's IP address. Players on the same network as Home Assistant are discovered automatically, and their address is kept up to date.",
         "data": {
           "host": "IP address",
           "name": "Name (optional)"
@@ -16,6 +17,10 @@
           "power_switch": "Speaker power switch",
           "airplay_fallback": "Also use the AirPlay session flag to detect playback"
         }
+      },
+      "zeroconf_confirm": {
+        "title": "Discovered Arylic player",
+        "description": "Add {name} ({host})?"
       },
       "reconfigure": {
         "title": "Change IP address",
@@ -32,7 +37,9 @@
     "abort": {
       "already_configured": "This player is already configured (its address has been updated).",
       "reconfigure_successful": "Address updated.",
-      "different_device": "That address belongs to a different player."
+      "different_device": "That address belongs to a different player.",
+      "cannot_connect": "Could not reach the player.",
+      "not_ipv4": "Only IPv4 addresses are supported."
     }
   },
   "options": {
