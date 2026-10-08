@@ -168,5 +168,5 @@ pytest, hassfest and HACS validation.
 
 ## Licence
 
-MIT. Not affiliated with Arylic or Libre Wireless. The icon is an original generic speaker, not
-Arylic's logo.
+MIT. Not affiliated with Arylic or Libre Wireless. The icon is an original drawing of a generic
+streamer front panel, not Arylic's logo.
