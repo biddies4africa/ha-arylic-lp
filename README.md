@@ -20,15 +20,16 @@ LAN.
 ## Installation
 
 **Prerequisites:** Home Assistant 2026.3 or newer, and a player HA can reach on TCP 2018 (and
-optionally TCP 7000 and UDP 1800). Give the player a fixed IP address (a DHCP reservation on your
-router), because auto-discovery isn't supported.
+optionally TCP 7000 and UDP 1800). Players on the same network as Home Assistant are discovered
+automatically (mDNS) and their address is kept up to date if it changes, so no DHCP reservation is
+needed. Players on another subnet can be added by IP, but then need a fixed address.
 
 1. Copy `custom_components/arylic_lp` into your HA `config/custom_components/` folder. (This
    repository is private for now, so HACS can't install it yet.)
 2. Restart Home Assistant.
-3. Go to **Settings → Devices & services → Add integration → Arylic - LP Series**.
-4. Enter the player's IP address (and optionally a name).
-5. Optionally pick the smart plug that powers the speakers. Leave it empty for play state and
+3. Discovered players appear under **Settings → Devices & services**; click **Add**. Otherwise use
+   **Add integration → Arylic - LP Series** and enter the player's IP address (and optionally a name).
+4. Optionally pick the smart plug that powers the speakers. Leave it empty for play state and
    controls only.
 
 ### Configuration options
