@@ -16,32 +16,29 @@ from .const import DOMAIN, EVENT_AUTOPOWER
 
 REASONS = {
     "playback_started": "playback started",
-    "idle": "the player was idle for the auto-off delay",
-    "player_unreachable": "the player was unreachable",
+    "idle": "idle",
+    "player_unreachable": "player unreachable",
 }
 
 
 def _message(data: dict[str, Any]) -> str:
-    verb = "turn on" if data.get("action") == "turn_on" else "turn off"
+    on = data.get("action") == "turn_on"
     switch = data.get("power_switch_name") or data.get("power_switch")
     attempt = data.get("attempt")
     error = data.get("error")
     match data.get("result"):
         case "requested":
             reason = REASONS.get(data.get("reason", ""), data.get("reason"))
-            return f"is going to {verb} {switch} because {reason}"
+            return f"turning {'on' if on else 'off'} {switch} ({reason})"
         case "attempt_failed":
-            return (
-                f"could not {verb} {switch} (attempt {attempt}): {error}. "
-                f"Retrying in {data.get('retry_in')} s"
-            )
+            return f"attempt {attempt} failed: {error}"
         case "succeeded":
-            return f"confirmed {switch} is {verb.split()[1]} after {attempt} attempts"
+            return f"turned {'on' if on else 'off'} {switch} (attempt {attempt})"
         case "gave_up":
-            return f"gave up trying to {verb} {switch} after {attempt} attempts: {error}"
+            return f"gave up after {attempt} attempts"
         case "cancelled":
-            return f"stopped trying to {verb} {switch}: {error}"
-    return f"{verb} {switch}: {data.get('result')}"
+            return f"stopped retrying: {error}"
+    return f"{data.get('action')} {switch}: {data.get('result')}"
 
 
 @callback

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from datetime import timedelta
 from unittest.mock import patch
 
@@ -297,11 +298,40 @@ async def test_logbook_messages(hass: HomeAssistant, flaky_setup, freezer) -> No
     await _advance(hass, freezer, 3)
     messages = [_message(e.data) for e in events]
     assert messages == [
-        "is going to turn on Fake Plug because playback started",
-        "could not turn on Fake Plug (attempt 1): network error:(2001) 2001. Retrying in 0 s",
-        "confirmed Fake Plug is on after 2 attempts",
+        "turning on Fake Plug (playback started)",
+        "attempt 1 failed: network error:(2001) 2001",
+        "turned on Fake Plug (attempt 2)",
     ]
 
 
 def _entry_id(hass: HomeAssistant) -> str:
     return hass.config_entries.async_entries(DOMAIN)[0].entry_id
+
+
+async def test_hung_call_gives_up_within_window(hass: HomeAssistant, flaky_setup, freezer) -> None:
+    fake, _, events = flaky_setup
+    autopower = hass.config_entries.async_entries(DOMAIN)[0].runtime_data.autopower
+    fake.playing = True
+    autopower.set_auto_on(False)
+    await _advance(hass, freezer, 3)
+    autopower.set_auto_on(True)
+
+    async def hang(call) -> None:
+        await asyncio.Event().wait()
+
+    hass.services.async_register("fakeplug", "turn_on", hang)
+    task = hass.async_create_task(autopower._async_set_power(True, "playback_started"))
+    # The (frozen) clock only moves when ticked; the window is 20 s.
+    for _ in range(25):
+        freezer.tick(timedelta(seconds=1))
+        for _ in range(5):
+            await asyncio.sleep(0)
+    await task
+    # One command in flight at a time, never a second while waiting; then give up.
+    results = [e.data["result"] for e in events]
+    assert results[0] == "requested"
+    assert results[-1] == "gave_up"
+    assert {e.data["error"] for e in events if e.data["result"] == "attempt_failed"} == {
+        "no response"
+    }
+    assert hass.states.get("fakeplug.plug").state == STATE_OFF

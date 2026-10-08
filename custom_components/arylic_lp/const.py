@@ -38,12 +38,12 @@ UNREACHABLE_OFF_DELAY: Final = timedelta(minutes=60)
 # for the service call to return (up to POWER_CALL_TIMEOUT) and then for the
 # switch state to confirm (cloud-backed plugs can lag). A failed attempt is
 # retried after the next delay, while the action is still wanted and the switch
-# still isn't in the target state - about 7 minutes in all.
-POWER_CALL_TIMEOUT: Final = 30
-POWER_CONFIRM_SECONDS: Final = 10
-POWER_RETRY_DELAYS: Final = (2, 5, 15, 30, 60, 60, 60, 60, 60, 60)
-# Failed attempts before a Repairs issue is raised (retries carry on).
-POWER_ISSUE_AFTER_ATTEMPTS: Final = 3
+# still isn't in the target state. Everything, including the waits, fits in
+# POWER_RETRY_WINDOW; after that it gives up and raises a Repairs issue.
+POWER_CALL_TIMEOUT: Final = 8
+POWER_CONFIRM_SECONDS: Final = 5
+POWER_RETRY_DELAYS: Final = (1, 2, 4, 6)
+POWER_RETRY_WINDOW: Final = 20
 
 # Fired for auto-power actions; shown in the logbook (Activity) and usable as an
 # automation trigger.

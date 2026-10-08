@@ -31,8 +31,8 @@ from .const import (
     EVENT_AUTOPOWER,
     POWER_CALL_TIMEOUT,
     POWER_CONFIRM_SECONDS,
-    POWER_ISSUE_AFTER_ATTEMPTS,
     POWER_RETRY_DELAYS,
+    POWER_RETRY_WINDOW,
     UNREACHABLE_OFF_DELAY,
 )
 from .coordinator import LPCoordinator
@@ -284,8 +284,14 @@ class AutoPowerController:
             service = "turn_on" if turn_on else "turn_off"
             context = Context()
             error = "unknown"
-            # Attempt 1 goes straight away; each retry waits its delay first.
+            loop = asyncio.get_running_loop()
+            deadline = loop.time() + POWER_RETRY_WINDOW
+            # Attempt 1 goes straight away; each retry waits its delay first,
+            # and none starts unless it fits in the window.
             for attempt, delay in enumerate((0, *POWER_RETRY_DELAYS), start=1):
+                if loop.time() + delay >= deadline:
+                    attempt -= 1
+                    break
                 if delay:
                     await asyncio.sleep(delay)
                 # Re-check before every command: conditions may have changed
@@ -310,8 +316,9 @@ class AutoPowerController:
                 if attempt == 1:
                     self._fire(service, RESULT_REQUESTED, reason, context)
 
+                call_timeout = min(POWER_CALL_TIMEOUT, deadline - loop.time())
                 try:
-                    async with asyncio.timeout(POWER_CALL_TIMEOUT):
+                    async with asyncio.timeout(call_timeout):
                         await self.hass.services.async_call(
                             split_entity_id(self.power_switch)[0],
                             service,
@@ -320,42 +327,27 @@ class AutoPowerController:
                             context=context,
                         )
                 except TimeoutError:
-                    error = f"no response within {POWER_CALL_TIMEOUT} s"
+                    error = "no response"
                 except Exception as err:
                     # Integrations should raise HomeAssistantError, but some
                     # leak their library's own exceptions (Tuya does).
                     error = str(err) or type(err).__name__
                 else:
-                    if await self._async_wait_for_state(target):
+                    confirm = min(POWER_CONFIRM_SECONDS, max(deadline - loop.time(), 1))
+                    if await self._async_wait_for_state(target, confirm):
                         self._succeeded(service, reason, context, attempt)
                         return
-                    error = f"did not report {target} within {POWER_CONFIRM_SECONDS} s"
+                    error = f"still {self._switch_state()}"
 
-                retry_in = (
-                    POWER_RETRY_DELAYS[attempt - 1] if attempt <= len(POWER_RETRY_DELAYS) else None
-                )
                 _LOGGER.warning(
-                    "%s %s failed (attempt %d): %s%s",
-                    service,
-                    self.power_switch,
-                    attempt,
-                    error,
-                    f"; retrying in {retry_in} s" if retry_in is not None else "; giving up",
+                    "%s %s failed (attempt %d): %s", service, self.power_switch, attempt, error
                 )
                 self._record_action(service, error)
-                if retry_in is not None:
-                    self._fire(
-                        service,
-                        RESULT_ATTEMPT_FAILED,
-                        reason,
-                        context,
-                        attempt=attempt,
-                        error=error,
-                        retry_in=retry_in,
-                    )
-                if attempt == POWER_ISSUE_AFTER_ATTEMPTS:
-                    self._create_issue(service, error)
+                self._fire(
+                    service, RESULT_ATTEMPT_FAILED, reason, context, attempt=attempt, error=error
+                )
 
+            _LOGGER.warning("Gave up trying to %s %s", service, self.power_switch)
             self._fire(service, RESULT_GAVE_UP, reason, context, attempt=attempt, error=error)
             self._create_issue(service, error)
 
@@ -413,8 +405,8 @@ class AutoPowerController:
             context=context,
         )
 
-    async def _async_wait_for_state(self, target: str) -> bool:
-        for _ in range(POWER_CONFIRM_SECONDS * 2):
+    async def _async_wait_for_state(self, target: str, seconds: float) -> bool:
+        for _ in range(int(seconds * 2)):
             if self._switch_state() == target:
                 return True
             await asyncio.sleep(0.5)
