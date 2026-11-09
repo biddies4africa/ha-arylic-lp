@@ -1,0 +1,67 @@
+name: Compatibility report
+description: Tell us how the integration works with your player, whether it works or not.
+title: "Compatibility: "
+labels: [compatibility]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        So far only the **LP10** has been tested. Reports from other Arylic models, and from the
+        LP10 on other firmware, are especially useful. Results go into the README's
+        **Tested with** table.
+  - type: input
+    id: model
+    attributes:
+      label: Player model
+      placeholder: LP10
+    validations:
+      required: true
+  - type: input
+    id: firmware
+    attributes:
+      label: Player firmware
+      description: Shown as "Firmware" on the player's device page in Home Assistant.
+      placeholder: AR241CP_8285.9.1
+    validations:
+      required: true
+  - type: dropdown
+    id: setup
+    attributes:
+      label: Setup
+      options:
+        - Discovered automatically
+        - Added by IP address
+        - Setup failed
+    validations:
+      required: true
+  - type: checkboxes
+    id: works
+    attributes:
+      label: What works
+      description: Tick what you checked and found working. Leave the rest unticked.
+      options:
+        - label: Shows playing with Spotify Connect
+        - label: Shows playing with AirPlay
+        - label: Shows playing with Google Cast
+        - label: Shows playing with TIDAL Connect
+        - label: Shows playing with Bluetooth
+        - label: Shows playing with line in
+        - label: Volume and mute
+        - label: Source selection
+        - label: Play/pause and next/previous
+        - label: Bass, mid and treble
+        - label: Virtual bass
+        - label: LED
+        - label: Auto-power (plug switches on and off)
+  - type: textarea
+    id: notes
+    attributes:
+      label: Notes
+      description: Anything that didn't work or behaved oddly.
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Diagnostics
+      description: |
+        Settings → Devices & services → Devices → the player → ⋮ → **Download diagnostics**,
+        then drag the file in here. Addresses and device IDs are left out of it.

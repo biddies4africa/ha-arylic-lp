@@ -8,6 +8,7 @@ from unittest.mock import patch
 
 from homeassistant.const import CONF_HOST, STATE_OFF, STATE_ON, STATE_UNAVAILABLE
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers import issue_registry as ir
 from homeassistant.setup import async_setup_component
 import pytest
@@ -221,6 +222,44 @@ async def test_unload(hass: HomeAssistant, setup) -> None:
     _, entry = setup
     assert await hass.config_entries.async_unload(entry.entry_id)
     await hass.async_block_till_done(wait_background_tasks=True)
+
+
+AUTOPOWER_ENTITIES = (
+    STATUS,
+    DELAY,
+    ONLY_OWN,
+    "switch.lounge_speakers_auto_on",
+    "switch.lounge_speakers_auto_off",
+)
+
+
+async def test_unlinking_plug_removes_autopower(hass: HomeAssistant, setup, hass_storage) -> None:
+    _, entry = setup
+    registry = er.async_get(hass)
+    for entity_id in AUTOPOWER_ENTITIES:
+        assert registry.async_get(entity_id) is not None
+    store_key = f"{DOMAIN}.{entry.entry_id}"
+    hass_storage[store_key] = {"version": 1, "key": store_key, "data": {"armed": True}}
+
+    hass.config_entries.async_update_entry(entry, options={CONF_AIRPLAY_FALLBACK: True})
+    await hass.async_block_till_done(wait_background_tasks=True)
+
+    for entity_id in AUTOPOWER_ENTITIES:
+        assert registry.async_get(entity_id) is None
+        assert hass.states.get(entity_id) is None
+    assert hass.states.get(PLAYER) is not None
+    assert store_key not in hass_storage
+
+
+async def test_removing_entry_deletes_saved_state(hass: HomeAssistant, setup, hass_storage) -> None:
+    _, entry = setup
+    store_key = f"{DOMAIN}.{entry.entry_id}"
+    hass_storage[store_key] = {"version": 1, "key": store_key, "data": {"armed": True}}
+
+    await hass.config_entries.async_remove(entry.entry_id)
+    await hass.async_block_till_done(wait_background_tasks=True)
+
+    assert store_key not in hass_storage
 
 
 class VendorError(Exception):

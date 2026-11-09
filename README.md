@@ -24,13 +24,29 @@ optionally TCP 7000 and UDP 1800). Players on the same network as Home Assistant
 automatically (mDNS) and their address is kept up to date if it changes, so no DHCP reservation is
 needed. Players on another subnet can be added by IP, but then need a fixed address.
 
-1. Copy `custom_components/arylic_lp` into your HA `config/custom_components/` folder. (This
-   repository is private for now, so HACS can't install it yet.)
+### With HACS (recommended)
+
+[![Open your Home Assistant instance and open this repository in HACS.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=biddies4africa&repository=ha-arylic-lp&category=integration)
+
+1. Click the button above. Or, in HACS, open ⋮ → **Custom repositories** and add
+   `https://github.com/biddies4africa/ha-arylic-lp` with type **Integration**.
+2. Download **Arylic - LP Series** and restart Home Assistant.
+
+### Manually
+
+1. Download the [latest release](https://github.com/biddies4africa/ha-arylic-lp/releases/latest)
+   and copy its `custom_components/arylic_lp` folder into your HA `config/custom_components/`
+   folder.
 2. Restart Home Assistant.
-3. Discovered players appear under **Settings → Devices & services**; click **Add**. Otherwise use
+
+### Adding a player
+
+[![Open your Home Assistant instance and start setting up Arylic - LP Series.](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=arylic_lp)
+
+1. Discovered players appear under **Settings → Devices & services**; click **Add**. Otherwise use
    **Add integration → Arylic - LP Series** and enter the player's IP address (and optionally a name).
-4. Optionally pick the smart plug that powers the speakers. Leave it empty for play state and
-   controls only.
+2. Optionally pick the smart plug that powers the speakers. Leave it empty for play state and
+   controls only. If you unlink the plug later, its auto-power entities are removed.
 
 ### Configuration options
 
@@ -138,7 +154,8 @@ automation:
 ## Removal
 
 1. Settings → Devices & services → **Arylic - LP Series** → ⋮ on each entry → **Delete**.
-2. Delete `config/custom_components/arylic_lp` and restart Home Assistant.
+2. Remove the integration in HACS (⋮ → **Remove**), or if you installed it manually, delete
+   `config/custom_components/arylic_lp`. Then restart Home Assistant.
 
 ## Security note
 

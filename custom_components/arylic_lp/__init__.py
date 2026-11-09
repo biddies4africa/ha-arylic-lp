@@ -8,10 +8,11 @@ from typing import Any
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_HOST, Platform
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import entity_registry as er
 
-from .autopower import AutoPowerController
+from .autopower import ENTITY_KEYS, AutoPowerController, async_remove_store
 from .client import LPClient
-from .const import CONF_AIRPLAY_FALLBACK, CONF_POWER_SWITCH
+from .const import CONF_AIRPLAY_FALLBACK, CONF_POWER_SWITCH, DOMAIN
 from .coordinator import LPCoordinator
 
 PLATFORMS: list[Platform] = [
@@ -54,6 +55,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: LPConfigEntry) -> bool:
     autopower = (
         AutoPowerController(hass, entry, coordinator, power_switch) if power_switch else None
     )
+    if autopower is None:
+        await _async_remove_autopower(hass, entry)
     entry.runtime_data = LPData(
         client=client,
         coordinator=coordinator,
@@ -71,8 +74,26 @@ async def async_setup_entry(hass: HomeAssistant, entry: LPConfigEntry) -> bool:
     return True
 
 
+async def _async_remove_autopower(hass: HomeAssistant, entry: LPConfigEntry) -> None:
+    """Remove the auto-power entities and saved state left by an unlinked plug."""
+    registry = er.async_get(hass)
+    prefix = entry.unique_id or entry.entry_id
+    removed = False
+    for platform, key in ENTITY_KEYS:
+        if entity_id := registry.async_get_entity_id(platform, DOMAIN, f"{prefix}_{key}"):
+            registry.async_remove(entity_id)
+            removed = True
+    if removed:
+        await async_remove_store(hass, entry.entry_id)
+
+
 async def _async_options_updated(hass: HomeAssistant, entry: LPConfigEntry) -> None:
     await hass.config_entries.async_reload(entry.entry_id)
+
+
+async def async_remove_entry(hass: HomeAssistant, entry: LPConfigEntry) -> None:
+    """Delete the entry's saved auto-power state with it."""
+    await async_remove_store(hass, entry.entry_id)
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: LPConfigEntry) -> bool:

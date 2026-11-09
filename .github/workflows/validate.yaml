@@ -6,6 +6,9 @@ on:
   schedule:
     - cron: "0 4 * * 1"
 
+permissions:
+  contents: read
+
 jobs:
   hassfest:
     runs-on: ubuntu-latest

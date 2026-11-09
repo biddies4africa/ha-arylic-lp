@@ -1,0 +1,76 @@
+name: Bug report
+description: Something doesn't work as the README describes.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. The README's **Known device quirks** and **Troubleshooting**
+        sections cover the most common problems, so it's worth a quick look first.
+  - type: textarea
+    id: problem
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what happened instead.
+    validations:
+      required: true
+  - type: input
+    id: model
+    attributes:
+      label: Player model
+      placeholder: LP10
+    validations:
+      required: true
+  - type: input
+    id: firmware
+    attributes:
+      label: Player firmware
+      description: Shown as "Firmware" on the player's device page in Home Assistant.
+      placeholder: AR241CP_8285.9.1
+    validations:
+      required: true
+  - type: input
+    id: ha_version
+    attributes:
+      label: Home Assistant version
+      placeholder: "2026.11.0"
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Integration version
+      placeholder: "0.4.1"
+    validations:
+      required: true
+  - type: dropdown
+    id: source
+    attributes:
+      label: What was playing (if relevant)
+      multiple: true
+      options:
+        - Spotify Connect
+        - AirPlay
+        - Google Cast
+        - TIDAL Connect
+        - Internet radio
+        - Bluetooth
+        - Line in
+        - USB
+        - Not relevant
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Diagnostics
+      description: |
+        Settings → Devices & services → Devices → the player → ⋮ → **Download diagnostics**,
+        then drag the file in here. Addresses and device IDs are left out of it.
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: |
+        Anything relevant from Settings → System → Logs. For more detail, open
+        **Arylic - LP Series** under Devices & services, choose ⋮ → **Enable debug logging**,
+        reproduce the problem, then disable it again to download the log.
+      render: text

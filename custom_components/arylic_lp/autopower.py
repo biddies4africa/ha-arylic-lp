@@ -59,6 +59,24 @@ RESULT_SUCCEEDED = "succeeded"
 RESULT_GAVE_UP = "gave_up"
 RESULT_CANCELLED = "cancelled"
 
+# Entities that only exist while a power switch is linked: (platform, key).
+ENTITY_KEYS: tuple[tuple[str, str], ...] = (
+    ("sensor", "autopower_status"),
+    ("switch", "auto_on"),
+    ("switch", "auto_off"),
+    ("switch", "only_own"),
+    ("number", "off_delay"),
+)
+
+
+def _store(hass: HomeAssistant, entry_id: str) -> Store[dict[str, Any]]:
+    return Store(hass, STORAGE_VERSION, f"{DOMAIN}.{entry_id}")
+
+
+async def async_remove_store(hass: HomeAssistant, entry_id: str) -> None:
+    """Delete an entry's saved auto-power state."""
+    await _store(hass, entry_id).async_remove()
+
 
 class AutoPowerController:
     """Drive one power switch from one player's play state.
@@ -100,9 +118,7 @@ class AutoPowerController:
         # Whether the running countdown was started while the player was unreachable.
         self._off_timer_unreachable = False
         self._started = False
-        self._store: Store[dict[str, Any]] = Store(
-            hass, STORAGE_VERSION, f"{DOMAIN}.{entry.entry_id}"
-        )
+        self._store = _store(hass, entry.entry_id)
         self._lock = asyncio.Lock()
         self._off_timer: CALLBACK_TYPE | None = None
         self._unsubs: list[CALLBACK_TYPE] = []
