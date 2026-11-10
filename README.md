@@ -263,6 +263,14 @@ integration runs Ruff, pytest, hassfest and HACS validation on every push.
 
 </details>
 
+## How it was built
+
+I built this integration with [Claude Code](https://claude.com/claude-code), Anthropic's AI
+coding tool. Claude wrote most of the code, tests and documentation, and ran the automated tests
+and the code and security reviews. I decided what the integration should do, run it at home on two
+LP10s, and check every change on that setup before it is released. All the code is here to read;
+if you spot a problem, please [open an issue](https://github.com/biddies4africa/ha-arylic-lp/issues/new/choose).
+
 ## Support
 
 Arylic - LP Series is an independent project, built and maintained in my spare time. If it's
