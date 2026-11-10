@@ -9,7 +9,7 @@
   "issue_tracker": "https://github.com/biddies4africa/ha-arylic-lp/issues",
   "loggers": ["custom_components.arylic_lp"],
   "requirements": [],
-  "version": "0.4.1",
+  "version": "0.5.0",
   "zeroconf": [
     {
       "type": "_airplay._tcp.local.",

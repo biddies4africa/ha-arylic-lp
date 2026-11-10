@@ -19,11 +19,11 @@ from custom_components.arylic_lp.const import CONF_AIRPLAY_FALLBACK, DOMAIN
 
 PLAYER = "media_player.lounge_speakers"
 PLAYING = "binary_sensor.lounge_speakers_playing"
-BASS = "number.lounge_speakers_bass"
-MID = "number.lounge_speakers_mid"
-TREBLE = "number.lounge_speakers_treble"
+BASS = "number.lounge_speakers_eq_bass"
+MID = "number.lounge_speakers_eq_mid"
+TREBLE = "number.lounge_speakers_eq_treble"
 LED = "switch.lounge_speakers_led"
-VIRTUAL_BASS = "switch.lounge_speakers_virtual_bass"
+VIRTUAL_BASS = "switch.lounge_speakers_eq_virtual_bass"
 DROPS = "sensor.lounge_speakers_connection_drops"
 
 

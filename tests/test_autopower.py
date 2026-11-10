@@ -6,7 +6,13 @@ import asyncio
 from datetime import timedelta
 from unittest.mock import patch
 
-from homeassistant.const import CONF_HOST, STATE_OFF, STATE_ON, STATE_UNAVAILABLE
+from homeassistant.const import (
+    CONF_HOST,
+    STATE_OFF,
+    STATE_ON,
+    STATE_UNAVAILABLE,
+    EntityCategory,
+)
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers import issue_registry as ir
@@ -29,7 +35,7 @@ PLUG = "input_boolean.plug"
 PLAYING = "binary_sensor.lounge_speakers_playing"
 STATUS = "sensor.lounge_speakers_auto_power"
 DELAY = "number.lounge_speakers_auto_off_delay"
-ONLY_OWN = "switch.lounge_speakers_only_turn_off_if_auto_on_turned_it_on"
+ONLY_OWN = "switch.lounge_speakers_auto_off_only_if_auto_on_turned_it_on"
 PLAYER = "media_player.lounge_speakers"
 
 
@@ -60,6 +66,26 @@ async def test_entities_created(hass: HomeAssistant, setup) -> None:
     assert hass.states.get(STATUS).state == "idle"
     assert hass.states.get(DELAY).state == "30"
     assert hass.states.get(PLAYER).attributes["volume_level"] == 0.24
+
+
+async def test_configuration_entities_are_grouped(hass: HomeAssistant, setup) -> None:
+    """The device page lists entities by name, so the names set the grouping."""
+    names = [
+        hass.states.get(entry.entity_id).name.removeprefix("Lounge Speakers ")
+        for entry in er.async_get(hass).entities.values()
+        if entry.platform == DOMAIN and entry.entity_category is EntityCategory.CONFIG
+    ]
+    assert sorted(names, key=str.casefold) == [
+        "Auto-off",
+        "Auto-off delay",
+        "Auto-off only if auto-on turned it on",
+        "Auto-on",
+        "EQ bass",
+        "EQ mid",
+        "EQ treble",
+        "EQ virtual bass",
+        "LED",
+    ]
 
 
 async def test_turns_on_when_playback_starts_and_off_after_delay(

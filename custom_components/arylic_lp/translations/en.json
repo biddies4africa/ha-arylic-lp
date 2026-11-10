@@ -78,7 +78,7 @@
         "name": "LED"
       },
       "virtual_bass": {
-        "name": "Virtual bass"
+        "name": "EQ virtual bass"
       },
       "auto_on": {
         "name": "Auto-on"
@@ -87,18 +87,18 @@
         "name": "Auto-off"
       },
       "only_own": {
-        "name": "Only turn off if auto-on turned it on"
+        "name": "Auto-off only if auto-on turned it on"
       }
     },
     "number": {
       "bass": {
-        "name": "Bass"
+        "name": "EQ bass"
       },
       "mid": {
-        "name": "Mid"
+        "name": "EQ mid"
       },
       "treble": {
-        "name": "Treble"
+        "name": "EQ treble"
       },
       "off_delay": {
         "name": "Auto-off delay"

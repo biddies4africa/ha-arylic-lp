@@ -63,8 +63,8 @@ needed. Players on another subnet can be added by IP, but then need a fixed addr
 |---|---|
 | `media_player.<name>` | Volume, mute, source, play/pause, next/previous |
 | `binary_sensor.<name>_playing` | On while playing (attributes: MCU play flag, AirPlay session, source) |
-| `number.<name>_bass` / `_mid` / `_treble` | Tone, −10…+10 dB (stored on the player) |
-| `switch.<name>_virtual_bass` | Virtual bass on/off (stored on the player) |
+| `number.<name>_eq_bass` / `_eq_mid` / `_eq_treble` | Tone, −10…+10 dB (stored on the player) |
+| `switch.<name>_eq_virtual_bass` | Virtual bass on/off (stored on the player) |
 | `switch.<name>_led` | Front LED/display on/off (stored on the player) |
 | `sensor.<name>_connection_drops` | Diagnostic: how often the player has become unreachable, with `last_drop` |
 
@@ -75,10 +75,12 @@ With a power switch linked, also:
 | `sensor.<name>_auto_power` | `playing` / `idle` / `off_pending` / `player_unavailable`, with `turns_off_at`, last action and last error |
 | `switch.<name>_auto_on` | Turn the plug on when playback starts |
 | `switch.<name>_auto_off` | Turn the plug off after the delay with no playback |
-| `switch.<name>_only_turn_off_if_auto_on_turned_it_on` | Leave a plug you switched on by hand alone |
+| `switch.<name>_auto_off_only_if_auto_on_turned_it_on` | Leave a plug you switched on by hand alone |
 | `number.<name>_auto_off_delay` | Minutes without playback before switching off (1–240, default 30) |
 
-Auto-power settings and the drop counter survive restarts.
+Auto-power settings and the drop counter survive restarts. Home Assistant lists a device's
+entities alphabetically, so the names are chosen to keep the settings grouped: the auto-power
+settings, then the EQ, then the LED. (Installs from before v0.5.0 keep their old entity IDs.)
 
 ## How it works (data updates)
 
