@@ -185,6 +185,18 @@ ruff check . && ruff format --check .
 Tests use `pytest-homeassistant-custom-component` with a fake player TCP server. CI runs ruff,
 pytest, hassfest and HACS validation.
 
+## Support
+
+This is a spare-time project. If it's saved you some fiddling, or your speakers some standby
+power, you can shout me a coffee.
+
+<a href="https://ko-fi.com/jandalengineering">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/biddies4africa/ha-arylic-lp/main/.github/assets/shout-me-a-coffee-dark.svg">
+    <img alt="Shout me a coffee on Ko-fi" src="https://raw.githubusercontent.com/biddies4africa/ha-arylic-lp/main/.github/assets/shout-me-a-coffee-light.svg" width="226" height="44">
+  </picture>
+</a>
+
 ## Licence
 
 MIT. Not affiliated with Arylic or Libre Wireless. The icon is an original drawing of a generic
