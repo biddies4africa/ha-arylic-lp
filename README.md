@@ -54,8 +54,8 @@ needed. Players on another subnet can be added by IP, but then need a fixed addr
 |---|---|---|
 | IP address | Setup; later **Reconfigure** | The player's address |
 | Name | Setup | Defaults to the name the player reports |
-| Speaker power switch | Setup; later **Configure** | Any `switch`, `light` or `input_boolean`. Empty = no auto-power |
-| Also use the AirPlay session flag | Setup; later **Configure** | A second playback signal for AirPlay (on by default) |
+| Speaker power switch | Setup; later **Configure**, or **Auto-power plug** on the device page | Any `switch`, `light` or `input_boolean`. Empty = no auto-power |
+| Also use the AirPlay session flag | Setup; later **Configure**, or **AirPlay playback detection** on the device page | A second playback signal for AirPlay (on by default) |
 
 ## Entities (per player)
 
@@ -66,6 +66,8 @@ needed. Players on another subnet can be added by IP, but then need a fixed addr
 | `number.<name>_eq_bass` / `_eq_mid` / `_eq_treble` | Tone, −10…+10 dB (stored on the player) |
 | `switch.<name>_eq_virtual_bass` | Virtual bass on/off (stored on the player) |
 | `switch.<name>_led` | Front LED/display on/off (stored on the player) |
+| `select.<name>_auto_power_plug` | The plug auto-power switches, or *No plug*. Picking one adds the entities below |
+| `switch.<name>_airplay_playback_detection` | Also count an active AirPlay session as playing |
 | `sensor.<name>_connection_drops` | Diagnostic: how often the player has become unreachable, with `last_drop` |
 
 With a power switch linked, also:
@@ -79,8 +81,11 @@ With a power switch linked, also:
 | `number.<name>_auto_off_delay` | Minutes without playback before switching off (1–240, default 30) |
 
 Auto-power settings and the drop counter survive restarts. Home Assistant lists a device's
-entities alphabetically, so the names are chosen to keep the settings grouped: the auto-power
-settings, then the EQ, then the LED. (Installs from before v0.5.0 keep their old entity IDs.)
+entities alphabetically, so the names are chosen to keep the settings grouped: playback
+detection and auto-power, then the EQ, then the LED. (Installs from before v0.5.0 keep their old
+entity IDs.) The **Auto-power plug** list offers each switch, light and input_boolean that is a
+device's main entity, leaving out other integrations' settings and hidden or disabled entities;
+**Configure** can link any of them.
 
 ## How it works (data updates)
 

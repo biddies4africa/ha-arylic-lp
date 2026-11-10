@@ -9,13 +9,14 @@ from datetime import timedelta
 from homeassistant.const import CONF_HOST, STATE_OFF, STATE_ON, STATE_UNAVAILABLE
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ServiceValidationError
+from homeassistant.setup import async_setup_component
 import pytest
 from pytest_homeassistant_custom_component.common import (
     MockConfigEntry,
     async_fire_time_changed,
 )
 
-from custom_components.arylic_lp.const import CONF_AIRPLAY_FALLBACK, DOMAIN
+from custom_components.arylic_lp.const import CONF_AIRPLAY_FALLBACK, CONF_POWER_SWITCH, DOMAIN
 
 PLAYER = "media_player.lounge_speakers"
 PLAYING = "binary_sensor.lounge_speakers_playing"
@@ -25,6 +26,8 @@ TREBLE = "number.lounge_speakers_eq_treble"
 LED = "switch.lounge_speakers_led"
 VIRTUAL_BASS = "switch.lounge_speakers_eq_virtual_bass"
 DROPS = "sensor.lounge_speakers_connection_drops"
+PLUG_SELECT = "select.lounge_speakers_auto_power_plug"
+AIRPLAY = "switch.lounge_speakers_airplay_playback_detection"
 
 
 @pytest.fixture
@@ -142,3 +145,44 @@ async def test_unknown_source_is_rejected(hass: HomeAssistant, player) -> None:
             {"entity_id": PLAYER, "source": "Cassette"},
             blocking=True,
         )
+
+
+async def test_link_plug_from_device_page(hass: HomeAssistant, player) -> None:
+    """Picking a plug in the Auto-power plug select adds the auto-power entities."""
+    assert await async_setup_component(hass, "input_boolean", {"input_boolean": {"plug": {}}})
+    select = hass.states.get(PLUG_SELECT)
+    assert select.state == "none"
+    options = select.attributes["options"]
+    # This integration's own switches aren't offered as plugs.
+    assert not any(option.startswith("Lounge Speakers") for option in options)
+
+    await hass.services.async_call(
+        "select", "select_option", {"entity_id": PLUG_SELECT, "option": "plug"}, blocking=True
+    )
+    await hass.async_block_till_done(wait_background_tasks=True)
+
+    entry = hass.config_entries.async_entries(DOMAIN)[0]
+    assert entry.options[CONF_POWER_SWITCH] == "input_boolean.plug"
+    assert hass.states.get(PLUG_SELECT).state == "plug"
+    assert hass.states.get("sensor.lounge_speakers_auto_power").state == "idle"
+
+    await hass.services.async_call(
+        "select", "select_option", {"entity_id": PLUG_SELECT, "option": "none"}, blocking=True
+    )
+    await hass.async_block_till_done(wait_background_tasks=True)
+    assert entry.options[CONF_POWER_SWITCH] is None
+    assert hass.states.get("sensor.lounge_speakers_auto_power") is None
+
+
+async def test_airplay_detection_switch_applies_without_reload(hass: HomeAssistant, player) -> None:
+    entry = hass.config_entries.async_entries(DOMAIN)[0]
+    client = entry.runtime_data.client
+    assert hass.states.get(AIRPLAY).state == STATE_OFF
+
+    await hass.services.async_call("switch", "turn_on", {"entity_id": AIRPLAY}, blocking=True)
+    await hass.async_block_till_done(wait_background_tasks=True)
+
+    assert hass.states.get(AIRPLAY).state == STATE_ON
+    assert entry.options[CONF_AIRPLAY_FALLBACK] is True
+    assert entry.runtime_data.coordinator.airplay_fallback is True
+    assert entry.runtime_data.client is client  # applied live, not reloaded

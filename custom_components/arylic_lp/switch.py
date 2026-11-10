@@ -1,4 +1,4 @@
-"""Switches: player settings (LED, virtual bass) and auto-power settings."""
+"""Switches: player settings (LED, virtual bass), playback detection and auto-power settings."""
 
 from __future__ import annotations
 
@@ -15,7 +15,8 @@ from homeassistant.helpers.restore_state import RestoreEntity
 from . import LPConfigEntry
 from .autopower import AutoPowerController
 from .client import LPClient
-from .entity import LPConfigEntity, LPEntity
+from .const import CONF_AIRPLAY_FALLBACK
+from .entity import LPConfigEntity, LPEntity, device_info
 
 # Commands go over one serialized connection anyway.
 PARALLEL_UPDATES = 1
@@ -83,6 +84,7 @@ async def async_setup_entry(
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     entities: list[SwitchEntity] = [PlayerSwitch(entry, d) for d in PLAYER_SWITCHES]
+    entities.append(AirPlayDetectionSwitch(entry))
     if entry.runtime_data.autopower is not None:
         entities.extend(AutoPowerSettingSwitch(entry, d) for d in SETTINGS)
     async_add_entities(entities)
@@ -149,3 +151,43 @@ class AutoPowerSettingSwitch(LPConfigEntity, SwitchEntity, RestoreEntity):
     async def async_turn_off(self, **kwargs: Any) -> None:
         self.entity_description.set(self._autopower, False)
         self.async_write_ha_state()
+
+
+class AirPlayDetectionSwitch(SwitchEntity):
+    """Also count an active AirPlay session as playing (the entry's option).
+
+    Changing it applies at once, without reloading the entry.
+    """
+
+    _attr_has_entity_name = True
+    _attr_translation_key = "airplay_fallback"
+    _attr_entity_category = EntityCategory.CONFIG
+    _attr_should_poll = False
+
+    def __init__(self, entry: LPConfigEntry) -> None:
+        self._entry = entry
+        self._attr_unique_id = f"{entry.unique_id or entry.entry_id}_airplay_fallback"
+        self._attr_device_info = device_info(entry)
+
+    async def async_added_to_hass(self) -> None:
+        await super().async_added_to_hass()
+
+        async def options_updated(_hass: HomeAssistant, _entry: LPConfigEntry) -> None:
+            self.async_write_ha_state()  # also changed under Configure
+
+        self.async_on_remove(self._entry.add_update_listener(options_updated))
+
+    @property
+    def is_on(self) -> bool:
+        return self._entry.options.get(CONF_AIRPLAY_FALLBACK, True)
+
+    async def async_turn_on(self, **kwargs: Any) -> None:
+        self._set(True)
+
+    async def async_turn_off(self, **kwargs: Any) -> None:
+        self._set(False)
+
+    def _set(self, on: bool) -> None:
+        self.hass.config_entries.async_update_entry(
+            self._entry, options={**self._entry.options, CONF_AIRPLAY_FALLBACK: on}
+        )

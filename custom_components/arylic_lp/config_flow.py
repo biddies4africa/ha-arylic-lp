@@ -19,11 +19,15 @@ from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
 import voluptuous as vol
 
 from .client import LPClient, LPError, device_id, discover
-from .const import CONF_AIRPLAY_FALLBACK, CONF_POWER_SWITCH, DEFAULT_NAME, DOMAIN
+from .const import (
+    CONF_AIRPLAY_FALLBACK,
+    CONF_POWER_SWITCH,
+    DEFAULT_NAME,
+    DOMAIN,
+    POWER_DOMAINS,
+)
 
 _LOGGER = logging.getLogger(__name__)
-
-POWER_DOMAINS = ["switch", "light", "input_boolean"]
 
 
 def _power_schema(defaults: dict[str, Any]) -> vol.Schema:

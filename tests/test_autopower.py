@@ -66,6 +66,7 @@ async def test_entities_created(hass: HomeAssistant, setup) -> None:
     assert hass.states.get(STATUS).state == "idle"
     assert hass.states.get(DELAY).state == "30"
     assert hass.states.get(PLAYER).attributes["volume_level"] == 0.24
+    assert hass.states.get("select.lounge_speakers_auto_power_plug").state == "plug"
 
 
 async def test_configuration_entities_are_grouped(hass: HomeAssistant, setup) -> None:
@@ -76,10 +77,12 @@ async def test_configuration_entities_are_grouped(hass: HomeAssistant, setup) ->
         if entry.platform == DOMAIN and entry.entity_category is EntityCategory.CONFIG
     ]
     assert sorted(names, key=str.casefold) == [
+        "AirPlay playback detection",
         "Auto-off",
         "Auto-off delay",
         "Auto-off only if auto-on turned it on",
         "Auto-on",
+        "Auto-power plug",
         "EQ bass",
         "EQ mid",
         "EQ treble",

@@ -20,7 +20,18 @@
         "default": "mdi:lan-disconnect"
       }
     },
+    "select": {
+      "power_switch": {
+        "default": "mdi:power-socket",
+        "state": {
+          "none": "mdi:power-plug-off-outline"
+        }
+      }
+    },
     "switch": {
+      "airplay_fallback": {
+        "default": "mdi:cast-audio-variant"
+      },
       "led": {
         "default": "mdi:led-off",
         "state": {

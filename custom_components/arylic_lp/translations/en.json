@@ -73,7 +73,18 @@
         "name": "Connection drops"
       }
     },
+    "select": {
+      "power_switch": {
+        "name": "Auto-power plug",
+        "state": {
+          "none": "No plug"
+        }
+      }
+    },
     "switch": {
+      "airplay_fallback": {
+        "name": "AirPlay playback detection"
+      },
       "led": {
         "name": "LED"
       },

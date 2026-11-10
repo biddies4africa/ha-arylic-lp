@@ -19,6 +19,7 @@ PLATFORMS: list[Platform] = [
     Platform.BINARY_SENSOR,
     Platform.MEDIA_PLAYER,
     Platform.NUMBER,
+    Platform.SELECT,
     Platform.SENSOR,
     Platform.SWITCH,
 ]
@@ -88,7 +89,14 @@ async def _async_remove_autopower(hass: HomeAssistant, entry: LPConfigEntry) -> 
 
 
 async def _async_options_updated(hass: HomeAssistant, entry: LPConfigEntry) -> None:
-    await hass.config_entries.async_reload(entry.entry_id)
+    """Apply changed options: a new plug needs a reload, the AirPlay setting doesn't."""
+    data = entry.runtime_data
+    linked = data.autopower.power_switch if data.autopower else None
+    if (entry.options.get(CONF_POWER_SWITCH) or None) != linked:
+        await hass.config_entries.async_reload(entry.entry_id)
+        return
+    data.coordinator.airplay_fallback = entry.options.get(CONF_AIRPLAY_FALLBACK, True)
+    await data.coordinator.async_request_refresh()
 
 
 async def async_remove_entry(hass: HomeAssistant, entry: LPConfigEntry) -> None:

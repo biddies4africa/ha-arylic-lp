@@ -10,6 +10,9 @@ DOMAIN: Final = "arylic_lp"
 CONF_POWER_SWITCH: Final = "power_switch"
 CONF_AIRPLAY_FALLBACK: Final = "airplay_fallback"
 
+# Entity domains that can power the speakers.
+POWER_DOMAINS: Final = ["switch", "light", "input_boolean"]
+
 DEFAULT_NAME: Final = "Arylic LP"
 DEFAULT_OFF_DELAY_MIN: Final = 30
 MIN_OFF_DELAY_MIN: Final = 1
