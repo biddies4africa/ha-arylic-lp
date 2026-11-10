@@ -108,7 +108,7 @@ Each player's settings can be changed at any time, either on its device page or 
 |---|---|---|
 | IP address | **Reconfigure** | The player's address. Players on the same network are followed automatically. |
 | Name | During setup | Defaults to the name the player reports. |
-| Speaker power switch | Device page (**Auto-power plug**) or **Configure** | The plug that auto-power controls. Leave it empty to turn auto-power off. |
+| Auto-power plug | Device page or **Configure** | The plug that auto-power controls: any `switch`, `light` or `input_boolean`. Leave it empty to turn auto-power off. |
 | AirPlay playback detection | Device page or **Configure** | Also treats an active AirPlay session as playing. On by default. |
 
 ## Entities

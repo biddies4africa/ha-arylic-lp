@@ -92,16 +92,17 @@ reports is used.
 
 ### The speaker power step
 
-Finally, you're asked about speaker power. This is the same screen that **Configure** shows later.
+Finally, you're asked about speaker power. This is the same screen that **Configure** shows later,
+and its two settings also appear on the player's device page.
 
 <p align="center">
-  <img src="images/speaker-power-options.png" alt="The Speaker power step, with a speaker power switch picker and the AirPlay session option" width="554">
+  <img src="images/speaker-power-options.png" alt="The Speaker power step, with the Auto-power plug picker and the AirPlay playback detection option" width="554">
 </p>
 
-- **Speaker power switch:** the plug that powers the speakers. Leave it empty to use play state
-  and controls only. You can link a plug later on the device page.
-- **Also use the AirPlay session flag to detect playback:** a second way of detecting AirPlay
-  playback. We recommend leaving it on.
+- **Auto-power plug:** the plug that powers the speakers. Leave it empty to use play state and
+  controls only. You can link a plug later on the device page.
+- **AirPlay playback detection:** a second way of detecting AirPlay playback. We recommend leaving
+  it on.
 
 Select **Submit**, and the player is ready to use.
 

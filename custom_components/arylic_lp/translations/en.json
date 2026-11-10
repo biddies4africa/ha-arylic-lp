@@ -12,10 +12,14 @@
       },
       "power": {
         "title": "Speaker power",
-        "description": "Optionally pick the smart plug that powers {name}'s speakers. It will be switched on when playback starts and off after a period of no playback. Leave empty for play-state and controls only.",
+        "description": "Choose the plug that powers {name}'s speakers. Auto-power switches it on when playback starts, and off after a set time with nothing playing.",
         "data": {
-          "power_switch": "Speaker power switch",
-          "airplay_fallback": "Also use the AirPlay session flag to detect playback"
+          "power_switch": "Auto-power plug",
+          "airplay_fallback": "AirPlay playback detection"
+        },
+        "data_description": {
+          "power_switch": "Any switch, light or input_boolean. Leave empty to use play state and controls only. You can link a plug later on the player's device page.",
+          "airplay_fallback": "Also treats an active AirPlay session as playing. Recommended."
         }
       },
       "zeroconf_confirm": {
@@ -24,19 +28,20 @@
       },
       "reconfigure": {
         "title": "Change IP address",
+        "description": "Enter the player's new IP address.",
         "data": {
           "host": "IP address"
         }
       }
     },
     "error": {
-      "cannot_connect": "Could not reach the player's control port (TCP 2018). Check the address and that Home Assistant can route to it.",
-      "invalid_host": "Enter an IP address or host name.",
-      "unknown": "Unexpected error."
+      "cannot_connect": "Could not reach the player's control port (TCP 2018). Check the IP address, and that Home Assistant can reach the player's network.",
+      "invalid_host": "Enter a valid IP address or host name.",
+      "unknown": "An unexpected error occurred. Check the Home Assistant log for details."
     },
     "abort": {
       "already_configured": "This player is already set up. If its address had changed, it has been updated.",
-      "reconfigure_successful": "Address updated.",
+      "reconfigure_successful": "The player's address has been updated.",
       "different_device": "That address belongs to a different player.",
       "cannot_connect": "Could not reach the player.",
       "not_ipv4": "Only IPv4 addresses are supported."
@@ -46,9 +51,14 @@
     "step": {
       "init": {
         "title": "Speaker power",
+        "description": "The plug that powers the speakers, and how playback is detected. Both settings are also on the player's device page.",
         "data": {
-          "power_switch": "Speaker power switch",
-          "airplay_fallback": "Also use the AirPlay session flag to detect playback"
+          "power_switch": "Auto-power plug",
+          "airplay_fallback": "AirPlay playback detection"
+        },
+        "data_description": {
+          "power_switch": "Any switch, light or input_boolean. Leave empty to turn auto-power off.",
+          "airplay_fallback": "Also treats an active AirPlay session as playing. Recommended."
         }
       }
     }
