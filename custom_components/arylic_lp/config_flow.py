@@ -89,10 +89,14 @@ class LPConfigFlow(ConfigFlow, domain=DOMAIN):
                     _LOGGER.exception("Unexpected error probing %s", host)
                     errors["base"] = "unknown"
                 else:
-                    unique_id = device_id(identity) or host
-                    await self.async_set_unique_id(unique_id)
-                    # Same player at a new address: just update the address.
-                    self._abort_if_unique_id_configured(updates={CONF_HOST: host})
+                    if (unique_id := device_id(identity)) is not None:
+                        await self.async_set_unique_id(unique_id)
+                        # Same player at a new address: just update the address.
+                        self._abort_if_unique_id_configured(updates={CONF_HOST: host})
+                    else:
+                        # No device ID (UDP 1800 unanswered). An address isn't a
+                        # stable ID, so add the entry without one.
+                        self._async_abort_entries_match({CONF_HOST: host})
                     self._host = host
                     self._identity = identity
                     self._title = (
@@ -187,9 +191,14 @@ class LPConfigFlow(ConfigFlow, domain=DOMAIN):
                     identity = await _async_probe(self.hass, host)
                 except LPError:
                     errors["base"] = "cannot_connect"
+                except Exception:
+                    _LOGGER.exception("Unexpected error probing %s", host)
+                    errors["base"] = "unknown"
                 else:
                     new_id = device_id(identity)
-                    if new_id and entry.unique_id and new_id != entry.unique_id:
+                    # Entries from before 0.5.0 may be keyed by address, not device ID.
+                    old_id = device_id({"usn": entry.unique_id or ""})
+                    if new_id and old_id and new_id != old_id:
                         return self.async_abort(reason="different_device")
                     return self.async_update_reload_and_abort(
                         entry,

@@ -27,6 +27,9 @@ _LOGGER = logging.getLogger(__name__)
 CONNECT_TIMEOUT = 3.0
 QUERY_TIMEOUT = 1.5
 MAX_FRAME = 8192
+# The LP10's AirPlay /info reply is ~770 bytes; anything far bigger isn't it.
+MAX_AIRPLAY_REPLY = 65536
+MAX_SOURCE_LEN = 32
 BACKOFF_INITIAL = 1.0
 BACKOFF_MAX = 30.0
 
@@ -65,37 +68,45 @@ class LPStatus:
     virtual_bass: bool | None = None
 
 
-def _int(value: str) -> int | None:
-    try:
-        return int(value)
-    except ValueError:
-        return None
-
-
 def parse_status(reply: str) -> LPStatus:
     """Parse ``STA:NET,0,24,3,0,3,0,0,1,0``.
 
     Field order: source, mute, volume, treble, bass, net, internet, playing,
-    led, upgrading.
+    led, upgrading. Values are checked like single-setting frames; an
+    out-of-range tone reads as unknown.
     """
     if not reply.startswith("STA:"):
         raise LPProtocolError(f"Not a status reply: {reply!r}")
     fields = reply[4:].rstrip(";").split(",")
     if len(fields) < 8:
         raise LPProtocolError(f"Short status reply: {reply!r}")
-
-    volume = _int(fields[2])
-    if volume is None or not 0 <= volume <= 100:
-        raise LPProtocolError(f"Invalid volume in status: {reply!r}")
+    try:
+        source = _source(fields[0])
+        volume = _volume(fields[2])
+    except ValueError as err:
+        raise LPProtocolError(f"Invalid status reply: {reply[:64]!r}") from err
     return LPStatus(
-        source=fields[0],
+        source=source,
         muted=fields[1] == "1",
         volume=volume,
-        treble=_int(fields[3]),
-        bass=_int(fields[4]),
+        treble=_optional(_tone, fields[3]),
+        bass=_optional(_tone, fields[4]),
         playing=fields[7] == "1",
         led=fields[8] == "1" if len(fields) > 8 else None,
     )
+
+
+def _optional(parser: Callable[[str], Any], value: str) -> Any:
+    try:
+        return parser(value)
+    except ValueError:
+        return None
+
+
+def _source(value: str) -> str:
+    if not 0 < len(value) <= MAX_SOURCE_LEN or not value.isprintable():
+        raise ValueError(value)
+    return value
 
 
 def _volume(value: str) -> int:
@@ -123,7 +134,7 @@ def _flag(value: str) -> bool:
 STATUS_FRAMES: dict[str, tuple[str, Callable[[str], Any]]] = {
     "VOL": ("volume", _volume),
     "MUT": ("muted", _flag),
-    "SRC": ("source", str),
+    "SRC": ("source", _source),
     "TRE": ("treble", _tone),
     "BAS": ("bass", _tone),
     "MID": ("mid", _tone),
@@ -397,15 +408,20 @@ async def async_airplay_active(host: str, timeout: float = 2.0) -> bool:
         )
     except (OSError, TimeoutError) as err:
         raise LPConnectionError(f"AirPlay endpoint on {host} unreachable") from err
+    raw = bytearray()
     try:
         writer.write(request)
         await writer.drain()
-        raw = await asyncio.wait_for(reader.read(), timeout)
+        async with asyncio.timeout(timeout):
+            while chunk := await reader.read(4096):
+                raw += chunk
+                if len(raw) > MAX_AIRPLAY_REPLY:
+                    raise LPProtocolError(f"Oversized AirPlay info from {host}")
     except (OSError, TimeoutError) as err:
         raise LPConnectionError(f"AirPlay endpoint on {host} did not answer") from err
     finally:
         writer.close()
-    _, _, body = raw.partition(b"\r\n\r\n")
+    _, _, body = bytes(raw).partition(b"\r\n\r\n")
     try:
         info = plistlib.loads(body)
         return bool(int(info["statusFlags"]) & 0x800)
@@ -413,22 +429,32 @@ async def async_airplay_active(host: str, timeout: float = 2.0) -> bool:
         raise LPProtocolError(f"Unexpected AirPlay info from {host}") from err
 
 
-def discover(host: str, timeout: float = 1.0) -> dict[str, Any]:
+def discover(host: str, timeout: float = 1.0, port: int = DISCOVERY_PORT) -> dict[str, Any]:
     """Blocking unicast LSSDP identity query on UDP 1800.
 
     Returns lower-cased header fields (``usn``, ``devicename``, ``fwversion``,
-    ``cast_model``, ``netmode``...). Run in an executor.
+    ``cast_model``, ``netmode``...). Only a reply from the player's own
+    address counts, so another host on the LAN can't answer in its place.
+    Run in an executor.
     """
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
-        sock.settimeout(timeout)
         try:
+            address = socket.gethostbyname(host)
             sock.bind(("0.0.0.0", 0))
-            port = sock.getsockname()[1]
+            local_port = sock.getsockname()[1]
             request = (
-                f"M-SEARCH * HTTP/1.1\r\nHOST: 0.0.0.0:{port}\r\n\r\nPROTOCOL: Version 1.0"
+                f"M-SEARCH * HTTP/1.1\r\nHOST: 0.0.0.0:{local_port}\r\n\r\nPROTOCOL: Version 1.0"
             ).encode("ascii")
-            sock.sendto(request, (host, DISCOVERY_PORT))
-            payload, _ = sock.recvfrom(8192)
+            sock.sendto(request, (address, port))
+            deadline = time.monotonic() + timeout
+            while True:
+                if (remaining := deadline - time.monotonic()) <= 0:
+                    raise TimeoutError
+                sock.settimeout(remaining)
+                payload, (sender, _) = sock.recvfrom(8192)
+                if sender == address:
+                    break
+                _LOGGER.debug("Ignoring discovery reply from %s (asked %s)", sender, address)
         except OSError as err:
             raise LPConnectionError(f"No discovery reply from {host}") from err
     result: dict[str, Any] = {}

@@ -68,6 +68,50 @@ async def test_same_player_new_ip_updates_entry(hass: HomeAssistant, patch_devic
     assert entry.data[CONF_HOST] == "192.0.2.10"
 
 
+async def test_player_without_device_id(hass: HomeAssistant, patch_device) -> None:
+    """No identity reply: no unique ID (not the address), and no duplicate entries."""
+    with patch(
+        "custom_components.arylic_lp.config_flow.discover",
+        side_effect=LPConnectionError("no reply"),
+    ):
+        result = await hass.config_entries.flow.async_init(
+            DOMAIN, context={"source": config_entries.SOURCE_USER}
+        )
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"], {CONF_HOST: "192.0.2.10"}
+        )
+        assert result["step_id"] == "power"
+        with patch("custom_components.arylic_lp.async_setup_entry", return_value=True):
+            result = await hass.config_entries.flow.async_configure(
+                result["flow_id"], {CONF_AIRPLAY_FALLBACK: True}
+            )
+        assert result["type"] is FlowResultType.CREATE_ENTRY
+        assert result["result"].unique_id is None
+
+        result = await hass.config_entries.flow.async_init(
+            DOMAIN, context={"source": config_entries.SOURCE_USER}
+        )
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"], {CONF_HOST: "192.0.2.10"}
+        )
+    assert result["type"] is FlowResultType.ABORT
+    assert result["reason"] == "already_configured"
+
+
+async def test_reconfigure_entry_keyed_by_address(hass: HomeAssistant, patch_device) -> None:
+    """Entries from before 0.5.0 could use the address as their ID; that's no mismatch."""
+    entry = MockConfigEntry(domain=DOMAIN, unique_id="192.0.2.5", data={CONF_HOST: "192.0.2.5"})
+    entry.add_to_hass(hass)
+    with patch("custom_components.arylic_lp.async_setup_entry", return_value=True):
+        result = await entry.start_reconfigure_flow(hass)
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"], {CONF_HOST: "192.0.2.10"}
+        )
+    assert result["type"] is FlowResultType.ABORT
+    assert result["reason"] == "reconfigure_successful"
+    assert entry.data[CONF_HOST] == "192.0.2.10"
+
+
 async def test_options_flow(hass: HomeAssistant, patch_device) -> None:
     entry = MockConfigEntry(
         domain=DOMAIN,

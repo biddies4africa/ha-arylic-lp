@@ -35,7 +35,7 @@
       "unknown": "Unexpected error."
     },
     "abort": {
-      "already_configured": "This player is already configured (its address has been updated).",
+      "already_configured": "This player is already set up. If its address had changed, it has been updated.",
       "reconfigure_successful": "Address updated.",
       "different_device": "That address belongs to a different player.",
       "cannot_connect": "Could not reach the player.",
