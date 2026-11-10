@@ -1,5 +1,9 @@
 # Arylic - LP Series for Home Assistant
 
+[![Latest release](https://img.shields.io/github/v/release/biddies4africa/ha-arylic-lp)](https://github.com/biddies4africa/ha-arylic-lp/releases/latest)
+[![HACS custom repository](https://img.shields.io/badge/HACS-custom%20repository-41BDF5)](https://my.home-assistant.io/redirect/hacs_repository/?owner=biddies4africa&repository=ha-arylic-lp&category=integration)
+[![Tests](https://github.com/biddies4africa/ha-arylic-lp/actions/workflows/tests.yaml/badge.svg)](https://github.com/biddies4africa/ha-arylic-lp/actions/workflows/tests.yaml)
+
 A local Home Assistant integration for **Arylic LP-series** network streamers (Libre Wireless LS8
 based firmware, e.g. `AR241CE_*` / `AR241CP_*`) that:
 
@@ -12,6 +16,12 @@ based firmware, e.g. `AR241CE_*` / `AR241CP_*`) that:
 
 Add as many players as you like, each with its own plug and settings. Everything stays on your
 LAN.
+
+![A player's device page: the controls, play-state and auto-power sensors, and all its settings](https://raw.githubusercontent.com/biddies4africa/ha-arylic-lp/main/docs/images/device-page.png)
+
+**New here?** The [user guide](https://github.com/biddies4africa/ha-arylic-lp/blob/main/docs/user-guide.md)
+walks through installing, adding a player, every part of the device page and setting up speaker
+auto-power, with screenshots. This README is the reference.
 
 > **Compatibility:** so far this has only been tested with the **Arylic LP10**. It should work with
 > other LP-series models, and other Arylic devices on the same newer Libre-based firmware, that
@@ -114,14 +124,21 @@ can't be told apart, so the player shows *playing* or *idle*.
   least 60 minutes, so a brief outage doesn't switch the speakers off, but a player that's been
   unplugged still does eventually. After 10 minutes unreachable, a **Repairs** issue is raised; it
   clears on recovery.
-- **Plug commands are retried** (3 attempts) and **confirmed** against the plug's state; cloud plugs
-  can be slow. If all attempts fail, a Repairs issue is raised with the error.
-- **IP changes:** re-adding the same player at a new address updates the existing entry (matched by
-  device ID), or use *Reconfigure*.
+- **Plug commands are confirmed and retried:** each one is checked against the plug's state (cloud
+  plugs can be slow) and retried for up to 20 seconds while it's still wanted. If every attempt
+  fails, a Repairs issue is raised with the error.
+- **Every auto-power action is logged** in the player's Activity (logbook), and fired as an
+  `arylic_lp_autopower` event you can use in automations.
+- **IP changes:** players on the same network are followed automatically through discovery.
+  Otherwise, re-adding the player at its new address updates the existing entry (matched by device
+  ID), or use *Reconfigure*.
+
+![The player's Activity: auto-power going from Playing to Turning off soon, switching the plug off, then Idle](https://raw.githubusercontent.com/biddies4africa/ha-arylic-lp/main/docs/images/device-activity.png)
 
 ## Example automation
 
-Turn the volume down in the evening:
+The [user guide](https://github.com/biddies4africa/ha-arylic-lp/blob/main/docs/user-guide.md#7-automations)
+has more, including a notification when a plug won't switch. Turn the volume down in the evening:
 
 ```yaml
 automation:
