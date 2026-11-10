@@ -12,11 +12,26 @@ from homeassistant.core import HomeAssistant
 
 from . import LPConfigEntry
 
-# Identity fields (from the player's UDP 1800 reply) that are safe to share.
-# Diagnostics get pasted into public issues, and the rest of the reply can
-# carry the player's address, MAC or network details, so for those only the
-# field names are included.
-SHARED_IDENTITY_FIELDS = ("devicename", "fwversion", "cast_model", "netmode")
+# Identity fields (from the player's UDP 1800 reply) that are safe to share:
+# what the model and firmware are, which helps with other models. Diagnostics
+# get pasted into public issues, so anything else (the LP10 also sends its
+# address, MAC as "usn" and time zone) is left out with only its name listed.
+SHARED_IDENTITY_FIELDS = (
+    "devicename",
+    "cast_model",
+    "fwversion",
+    "cast_fwversion",
+    "version",
+    "speakertype",
+    "source_list",
+    "mramode",
+    "netmode",
+    "wifiband",
+    "state",
+    "fn",
+    "port",
+    "tcpport",
+)
 _IPV4 = re.compile(r"\b\d{1,3}(?:\.\d{1,3}){3}\b")
 
 

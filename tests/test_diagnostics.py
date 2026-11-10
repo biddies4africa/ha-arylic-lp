@@ -27,7 +27,9 @@ async def test_diagnostics_withhold_addresses(hass: HomeAssistant, patch_device)
                 "devicename": "Lounge Speakers",
                 "fwversion": "AR241CP_8285.9.1",
                 "cast_model": "LP10",
-                "location": HOST,
+                "source_list": "LS8::01000030",
+                "host": HOST,
+                "cast_timezone": "Europe/Paris",
                 "ssid": "Home WiFi",
             },
         },
@@ -41,13 +43,14 @@ async def test_diagnostics_withhold_addresses(hass: HomeAssistant, patch_device)
 
     diagnostics = await async_get_config_entry_diagnostics(hass, entry)
 
-    for secret in (HOST, PLUG_HOST, USN, "Home WiFi"):
+    for secret in (HOST, PLUG_HOST, USN, "Europe/Paris", "Home WiFi"):
         assert secret not in str(diagnostics)
     assert diagnostics["entry"]["data"]["identity"] == {
         "devicename": "Lounge Speakers",
-        "fwversion": "AR241CP_8285.9.1",
         "cast_model": "LP10",
-        "withheld_fields": ["location", "ssid", "usn"],
+        "fwversion": "AR241CP_8285.9.1",
+        "source_list": "LS8::01000030",
+        "withheld_fields": ["cast_timezone", "host", "ssid", "usn"],
     }
     assert diagnostics["coordinator"]["last_error"] == "**REDACTED** did not answer PLA;"
     assert diagnostics["autopower"]["last_error"] == "Cannot connect to **REDACTED**"
