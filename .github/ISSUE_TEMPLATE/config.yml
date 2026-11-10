@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: User guide
+    url: https://github.com/biddies4africa/ha-arylic-lp/blob/main/docs/user-guide.md
+    about: Setup, every setting explained, automations and troubleshooting.
+  - name: Report a security vulnerability
+    url: https://github.com/biddies4africa/ha-arylic-lp/security/advisories/new
+    about: Please report security problems privately, not as a public issue.

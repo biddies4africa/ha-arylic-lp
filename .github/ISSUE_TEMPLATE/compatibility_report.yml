@@ -6,9 +6,10 @@ body:
   - type: markdown
     attributes:
       value: |
-        So far only the **LP10** has been tested. Reports from other Arylic models, and from the
-        LP10 on other firmware, are especially useful. Results go into the README's
-        **Tested with** table.
+        The integration has been tested on the **LP10** only, so reports from other Arylic models,
+        and from the LP10 on other firmware versions, are especially valuable. Confirmed results
+        are added to the README's
+        [tested hardware](https://github.com/biddies4africa/ha-arylic-lp#tested-hardware) table.
   - type: input
     id: model
     attributes:
@@ -20,7 +21,7 @@ body:
     id: firmware
     attributes:
       label: Player firmware
-      description: Shown as "Firmware" on the player's device page in Home Assistant.
+      description: Shown as **Firmware** on the player's device page in Home Assistant.
       placeholder: AR241CP_8285.9.1
     validations:
       required: true
@@ -38,30 +39,30 @@ body:
     id: works
     attributes:
       label: What works
-      description: Tick what you checked and found working. Leave the rest unticked.
+      description: Tick each feature you tested and found working. Leave the others unticked.
       options:
-        - label: Shows playing with Spotify Connect
-        - label: Shows playing with AirPlay
-        - label: Shows playing with Google Cast
-        - label: Shows playing with TIDAL Connect
-        - label: Shows playing with Bluetooth
-        - label: Shows playing with line in
+        - label: Shows as playing with Spotify Connect
+        - label: Shows as playing with AirPlay
+        - label: Shows as playing with Google Cast
+        - label: Shows as playing with TIDAL Connect
+        - label: Shows as playing with Bluetooth
+        - label: Shows as playing with line in
         - label: Volume and mute
         - label: Source selection
-        - label: Play/pause and next/previous
+        - label: Play/pause and next/previous track
         - label: Bass, mid and treble
         - label: Virtual bass
         - label: LED
-        - label: Auto-power (plug switches on and off)
+        - label: Auto-power (the plug switches on and off)
   - type: textarea
     id: notes
     attributes:
       label: Notes
-      description: Anything that didn't work or behaved oddly.
+      description: Anything that didn't work, or behaved unexpectedly.
   - type: textarea
     id: diagnostics
     attributes:
       label: Diagnostics
       description: |
-        Settings → Devices & services → Devices → the player → ⋮ → **Download diagnostics**,
-        then drag the file in here. Addresses and device IDs are left out of it.
+        On the player's device page, open the **⋮** menu and select **Download diagnostics**,
+        then drag the file here. It leaves out the player's address, MAC address and time zone.

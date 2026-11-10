@@ -1,14 +1,18 @@
 # Security policy
 
-## Reporting a problem
+## Supported versions
 
-Please report security problems privately, not in a public issue: on this repository, open
-**Security → Report a vulnerability**. You'll get a reply there.
+Security fixes are made in the latest release only. Please make sure you're running it before
+reporting a problem.
 
-Only the latest release is supported, so please check the problem still happens on it.
+## Reporting a vulnerability
 
-## What this integration can't fix
+Please report vulnerabilities privately rather than in a public issue. On this repository, go to
+**Security** > **Report a vulnerability**, and describe the problem and how to reproduce it. You'll
+receive a reply through the private advisory.
 
-The players' control port (TCP 2018) has no authentication: anything on the same network can
-change volume or source. That's how the firmware works, not something this integration can
-change. Keep the players on a network you trust (see the README's **Security note**).
+## Out of scope
+
+The players' control port (TCP 2018) has no authentication, so any device on the same network can
+change the volume or source. This is how the player's firmware works, and the integration cannot
+change it. Keep the players on a network you trust.
